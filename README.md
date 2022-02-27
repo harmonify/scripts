@@ -14,6 +14,11 @@
 * Add Python to your PATH
 * Add the cloned repository to your PATH, for convenience
 
+### Add a new PATH variable
+
+* [For Windows](https://stackoverflow.com/questions/44272416/how-to-add-a-folder-to-path-environment-variable-in-windows-10-with-screensho)
+* [For Linux](https://unix.stackexchange.com/questions/26047/how-to-correctly-add-a-path-to-path)
+
 ## Usage
 
 An example of using `ginit`, a script that initializes a new Git repository and adds common metadata files to it:
