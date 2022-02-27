@@ -1,0 +1,168 @@
+#!/usr/bin/env python
+
+from __future__ import annotations
+import json
+import sys
+import os
+import shutil
+import subprocess
+
+
+def main(args: list[str]) -> None:
+    try:
+        if len(args) >= 1 and args[0].startswith('-'):
+            switch(s=args[0])
+            exit()
+        arg = args[0] if len(args) >= 1 else "."
+        copy_metadata(dest_dir=arg)
+        execute_git(path=arg)
+    except KeyboardInterrupt:
+        print("\nExiting...")
+        exit()
+    except Exception as e:
+        print(e)
+        sys.exit(1)
+
+
+def switch(s: str) -> None:
+    """ Map the switch to the corresponding function and execute it. """
+    switches = {
+        "-h": help,
+        "--help": help,
+        "-c": create_config,
+        "--config": create_config,
+        "--init-only": execute_git,
+        "--file-only": copy_metadata,
+    }
+
+    if s in switches:
+        switches[s]()
+    else:
+        print(f"Unknown switch: {s}")
+        help()
+
+
+def copy_metadata(dest_dir: str = ".") -> None:
+    """
+    Copy all files in source directory to destination directory.
+    """
+    data = read_config()
+    src_dir = data["src_dir"]
+    if not os.path.exists(src_dir):
+        raise Exception(f"{src_dir} not found.")
+    for src_entry in os.scandir(src_dir):
+        dest_path = os.path.join(dest_dir, src_entry.name)
+        if os.path.exists(dest_path):
+            print(f"{dest_path} is already exists. Skipping...")
+            continue
+        if src_entry.is_file():
+            shutil.copy(src_entry.path, dest_path)
+        elif src_entry.is_dir():
+            shutil.copytree(src_entry.path, dest_path)
+        else:
+            raise Exception(f"{src_entry.path} is not a file or directory.")
+
+
+def execute_git(path=".") -> None:
+    """
+    Initialize git repository in the given path and ask user to commit or not.
+    """
+    subprocess.call(["git", "init"], cwd=path)
+    subprocess.call(["git", "add", "."], cwd=path)
+    if input("Commit? (y/n): ") == "y":
+        subprocess.call(["git", "commit", "-m", "Initial commit"], cwd=path)
+    else:
+        print("Aborted.")
+    subprocess.call(["git", "status"], cwd=path)
+
+
+def read_config() -> dict[str, str]:
+    """ Read the config file and return the data. """
+    config = os.path.join(__location__, config_name)
+
+    if not os.path.exists(config):
+        print(f"{config} not found.")
+        print(f"Initializing {config_name}...")
+        data = create_config()
+    else:
+        print(f"Reading {config_name}...")
+        with open(config, "r") as f:
+            data = json.loads(f.read())
+    return data
+
+
+def create_config() -> dict[str, str]:
+    """ Create a config file and return the data. """
+    while True:
+        print()
+        print("Enter the metadata source directory path (e.g. /home/user/ginit-files)")
+        print("Default: '<script-location>/ginit-files/'")
+        src = input(": ") or os.path.join(__location__, "ginit-files")
+        # check if user specify a relative path or absolute path
+        if os.path.isabs(src):
+            src_dir = os.path.realpath(src)
+        else:
+            src_dir = os.path.realpath(
+                os.path.join(os.getcwd(), *src.split("/")))
+        print(src_dir)
+        if not os.path.isdir(src_dir):
+            print(f"{src_dir} is not a directory.")
+        elif input("Is this a right path (y/n)? ") == "y":
+            break
+    data = {
+        "app": "ginit",
+        "version": "1.0",
+        "src_dir": src_dir,
+    }
+
+    config = os.path.join(__location__, config_name)
+    with open(config, "w") as f:
+        f.write(json.dumps(data))
+    print(f"{config_name} created.")
+    return data
+
+
+def help() -> None:
+    print("""
+=====================================================
+ginit - a python util to initialize git repository
+=====================================================
+
+    Usage:
+        python ginit [options] [source] [destination] ...
+
+    Options:
+        -h, --help
+            Print this help message and exit.
+        -c, --config
+            Create a config file in the script directory.
+        --init-only
+            Only initialize git repository and ask user to commit or not.
+        --file-only
+            Only copy metadata files to destination directory.
+
+    Description:
+        ginit is a python utility to initialize git repository and copy
+        all files from source directory to destination directory.
+        The source directory is the directory where metadata files are
+        stored and included in every ginit call.
+
+    Examples:
+        python ginit
+            Copy all files in source directory to current directory
+            and initialize git repository.
+
+        python ginit /path/to/destination
+            Copy all files in source directory to `/path/to/destination`
+            and initialize git repository.
+
+        python ginit -h
+            Print this help message and exit.
+""")
+
+
+if __name__ == '__main__':
+    config_name = "ginit.json"
+    __location__ = os.path.realpath(
+        os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    main(sys.argv[1:])
