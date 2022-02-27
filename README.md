@@ -16,6 +16,8 @@
 
 ### Add a new PATH variable
 
+Some links to community answers on how to add a new PATH variable to your local machine:
+
 * [For Windows](https://stackoverflow.com/questions/44272416/how-to-add-a-folder-to-path-environment-variable-in-windows-10-with-screensho)
 * [For Linux](https://unix.stackexchange.com/questions/26047/how-to-correctly-add-a-path-to-path)
 
