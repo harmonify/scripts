@@ -136,9 +136,10 @@ Description:
 
     For Windows, this script require Administrator privileges.
     You can run this script by:
-    * Opening the shell with `Run as administrator` option.
-    * Running `wsudo.bat` batch file.
-        e.g. `wsudo.bat python pylink.py file1 file2`
+    * Running the shell with `Run as administrator` option.
+    * Running `pylink.cmd` batch file. This will execute a
+      UAC prompt.
+        e.g. `pylink.cmd file1 file2`
 
 Examples:
     python pylink file1 file2

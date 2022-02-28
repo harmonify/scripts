@@ -1,5 +1,3 @@
-
-
 @REM by Amr Ali on https://stackoverflow.com/a/27083780
 <!-- : --- Self-Elevating Batch Script ---------------------------
 @whoami /groups | find "S-1-16-12288" > nul && goto :admin
@@ -23,5 +21,5 @@ echo Arguments   : %*
 echo Working dir : %cd%
 echo.
 :: administrator commands here
-:: e.g., run shell as admin
+:: e.g., run shell as admin and send output to stdout
 cmd /c "%*"

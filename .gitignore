@@ -1,4 +1,9 @@
 # scripts config path
 ginit.json
 pma.json
+
+# scripts files
 ginit-files/**/*
+
+# scripts logs
+pylink.log
