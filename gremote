@@ -1,28 +1,46 @@
 #!/usr/bin/env python
 
+from typing import Any
 import webbrowser
 import subprocess
 import sys
+import re
 
 
 def main(args=None):
     try:
-        if args[0].startswith('-'):
-            switch(s=args[0])
-        remote = "origin" if len(args) == 1 else args[1]
-        url = subprocess.check_output(
-            f"git remote get-url {remote}".split()).decode().strip(".git\n")
-        print(url)
-        webbrowser.open(url, new=0, autoraise=True)
+        if len(args) >= 1:
+            if args[0].startswith('-'):
+                switch(args[0], *args[1:])
+                exit(0)
+            elif args[-1].startswith('-'):
+                switch(args[-1], *args[:-1])
+                exit(0)
+        remote = args[0] if len(args) >= 1 else "origin"
+        url = subprocess.check_output(["git", "remote", "get-url", remote]).decode("utf-8").strip()
+        # parse the url for hostname and path
+        git_url = re.sub(r"^"
+            r"(?:https?://|git@)"
+            r"([^:/]*)"
+            r"(?::|/)"
+            r"(.*)"
+            r"\.git$"
+            r"$", r"https://\1/\2", url)
+        print(f"Opening 'origin' git remote: {git_url}")
+        webbrowser.open(git_url, new=0, autoraise=True)
+        exit(0)
+    except KeyboardInterrupt:
+        print("Aborted")
+        exit(0)
     except subprocess.CalledProcessError:
         print("No remote found")
-    except KeyboardInterrupt:
-        print("\nAborted")
+        exit(1)
     except Exception as e:
         print(e)
+        exit(1)
 
 
-def switch(s: str) -> None:
+def switch(s: str, *args: Any) -> None:
     """ Map the switch to the corresponding function and execute it. """
     # map switches to functions
     # if no function is found, print help
@@ -32,38 +50,39 @@ def switch(s: str) -> None:
     }
 
     if s in switches:
-        switches[s]()
+        switches[s](*args)
     else:
-        print(f"Unknown switch: {s}")
-        help()
+        raise Exception(f"Unknown switch: {s}. Use -h or --help for help.")
 
 
-def help():
+def help(*args: Any, **kwargs: Any) -> None:
     print("""
-===============================================
+==========================================================
+
 gremote - open git remote url in the browser
-===============================================
 
-    Usage:
-        python gremote [options] [remote]
+==========================================================
 
-    Options:
-        -h, --help
-            Print this help message and exit.
+Usage:
+    python gremote [options] [remote]
+
+Options:
+    -h, --help
+        Print this help message and exit.
+
+Description:
+    This script opens the git remote url in a browser.
+    If no remote is provided, the `origin` remote is used.
+
+Examples:
+    python gremote
+        Open the `origin` remote url.
     
-    Description:
-        This script opens the git remote url in a browser.
-        If no remote is provided, the `origin` remote is used.
-
-    Examples:
-        python gremote
-            Open the `origin` remote url.
-        
-        python gremote dev
-            Open the `dev` remote url.
-        
-        python gremote -h
-            Print this help message and exit.
+    python gremote dev
+        Open the `dev` remote url.
+    
+    python gremote -h
+        Print this help message and exit.
 """)
 
 
