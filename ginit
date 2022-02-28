@@ -54,6 +54,7 @@ def copy_metadata(dest_dir: str = ".") -> None:
     src_dir = data["src_dir"]
     if not os.path.exists(src_dir):
         raise Exception(f"{src_dir} not found.")
+    print(f"Copying metadata files from {src_dir} to {os.path.realpath(dest_dir)}...")
     for src_entry in os.scandir(src_dir):
         dest_path = os.path.join(dest_dir, src_entry.name)
         if os.path.exists(dest_path):
@@ -72,6 +73,7 @@ def execute_git(path=".") -> None:
     Initialize git repository in the given path and ask user to commit or not.
     """
     subprocess.call(["git", "init"], cwd=path)
+    print("Adding all files to staging area...")
     subprocess.call(["git", "add", "."], cwd=path)
     if input("Commit? (y/n): ") == "y":
         subprocess.call(["git", "commit", "-m", "Initial commit"], cwd=path)
