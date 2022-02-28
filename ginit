@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import annotations
+from typing import Any
 import json
 import sys
 import os
@@ -10,21 +11,25 @@ import subprocess
 
 def main(args: list[str]) -> None:
     try:
-        if len(args) >= 1 and args[0].startswith('-'):
-            switch(s=args[0])
-            exit()
+        if len(args) >= 1:
+            if args[0].startswith('-'):
+                switch(args[0], *args[1:])
+            elif args[-1].startswith('-'):
+                switch(args[-1], *args[:-1])
+            exit(0)
         arg = args[0] if len(args) >= 1 else "."
         copy_metadata(dest_dir=arg)
         execute_git(path=arg)
+        exit(0)
     except KeyboardInterrupt:
         print("\nExiting...")
-        exit()
+        exit(0)
     except Exception as e:
         print(e)
-        sys.exit(1)
+        exit(1)
 
 
-def switch(s: str) -> None:
+def switch(s: str, *args: Any) -> None:
     """ Map the switch to the corresponding function and execute it. """
     switches = {
         "-h": help,
@@ -36,10 +41,9 @@ def switch(s: str) -> None:
     }
 
     if s in switches:
-        switches[s]()
+        switches[s](*args)
     else:
-        print(f"Unknown switch: {s}")
-        help()
+        raise Exception(f"Unknown switch: {s}. Use -h or --help for help.")
 
 
 def copy_metadata(dest_dir: str = ".") -> None:
@@ -122,42 +126,44 @@ def create_config() -> dict[str, str]:
     return data
 
 
-def help() -> None:
+def help(*args: Any, **kwargs: Any) -> None:
     print("""
-=====================================================
+=====================================================================
+
 ginit - a python util to initialize git repository
-=====================================================
 
-    Usage:
-        python ginit [options] [source] [destination] ...
+=====================================================================
 
-    Options:
-        -h, --help
-            Print this help message and exit.
-        -c, --config
-            Create a config file in the script directory.
-        --init-only
-            Only initialize git repository and ask user to commit or not.
-        --file-only
-            Only copy metadata files to destination directory.
+Usage:
+    python ginit [options] [source] [destination] ...
 
-    Description:
-        ginit is a python utility to initialize git repository and copy
-        all files from source directory to destination directory.
-        The source directory is the directory where metadata files are
-        stored and included in every ginit call.
+Options:
+    -h, --help
+        Print this help message and exit.
+    -c, --config
+        Create a config file in the script directory.
+    --init-only
+        Only initialize git repository and ask user to commit or not.
+    --file-only
+        Only copy metadata files to destination directory.
 
-    Examples:
-        python ginit
-            Copy all files in source directory to current directory
-            and initialize git repository.
+Description:
+    ginit is a python utility to initialize git repository and copy
+    all files from source directory to destination directory.
+    The source directory is the directory where metadata files are
+    stored and included in every ginit call.
 
-        python ginit /path/to/destination
-            Copy all files in source directory to `/path/to/destination`
-            and initialize git repository.
+Examples:
+    python ginit
+        Copy all files in source directory to current directory
+        and initialize git repository.
 
-        python ginit -h
-            Print this help message and exit.
+    python ginit /path/to/destination
+        Copy all files in source directory to `/path/to/destination`
+        and initialize git repository.
+
+    python ginit -h
+        Print this help message and exit.
 """)
 
 
