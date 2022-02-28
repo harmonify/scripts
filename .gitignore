@@ -1,2 +1,4 @@
 # scripts config path
 ginit.json
+pma.json
+ginit-files/**/*

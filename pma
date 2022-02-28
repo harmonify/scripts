@@ -1,0 +1,135 @@
+#!/usr/bin/env python
+
+import os
+from typing import Any
+import webbrowser
+import sys
+import json
+
+
+def main(args: list[str]) -> None:
+    try:
+        if len(args) >= 1:
+            if args[0].startswith('-'):
+                switch(args[0], *args[1:])
+                exit(0)
+            elif args[-1].startswith('-'):
+                switch(args[-1], *args[:-1])
+                exit(0)
+        browse(*args)
+        exit(0)
+    except KeyboardInterrupt:
+        print("Exiting...")
+        exit(0)
+    except Exception as e:
+        print(e)
+        exit(1)
+
+
+def switch(s: str, *args: Any) -> None:
+    """ Map the switch to the corresponding function and execute it. """
+    switches = {
+        "-h": help,
+        "--help": help,
+        "-v": check_version,
+        "--version": check_version,
+        "-i": create_config,
+        "--init": create_config,
+    }
+
+    if s in switches:
+        switches[s](*args)
+    else:
+        print(f"Unknown switch: {s}")
+        help()
+
+
+def browse(db=None, table=None):
+    """ Open phpMyAdmin in the browser. """
+    data = read_config()
+    route = ""
+    message = "phpMyAdmin"
+    if db:
+        route = f"route=/database/structure&db={db}"
+        message += f" -> {db}"
+    if table:
+        route = f"route=/sql&db={db}&table={table}"
+        message += f"/{table}"
+    print(message)
+    url = f"{data['url']}?{route}"
+    webbrowser.open(url, new=0, autoraise=True)
+
+
+def check_version(*args: Any, **kwargs: Any) -> None:
+    """Print version information and exit."""
+    data = read_config()
+    print(f"{data['app']} v{data['version']}")
+
+
+def read_config(*args: Any, **kwargs: Any) -> dict[str, str]:
+    """ Read the config file and return the data. """
+    if not os.path.exists(config):
+        print(f"{config} not found.")
+        print(f"Initializing {config_name}...")
+        data = create_config()
+    else:
+        print(f"Reading {config_name}...")
+        with open(config, "r") as f:
+            data = json.loads(f.read())
+    return data
+
+
+def create_config(*args: Any, **kwargs: Any) -> dict[str, str]:
+    """ Create a config file and return the data. """
+    while True:
+        url = input("Please enter the full url to your phpmyadmin index page: ")
+        if input("Is this a right url (y/n)? ") == "y":
+            break
+    data = {
+        "app": "pma",
+        "version": "1.0",
+        "url": url,
+    }
+    with open(config, "w") as f:
+        f.write(json.dumps(data))
+    print(f"{config_name} created.")
+    return data
+
+
+def help(*args: Any, **kwargs: Any) -> None:
+    """ Print help information and exit. """
+    print(f"""
+====================================================================
+pma - a shortcut to open the phpMyAdmin database url in a browser
+====================================================================
+Usage:
+    pma [option] [database] [table]
+
+Options:
+    -h, --help
+        Print this help message and exit.
+    -v, --version
+        Print version information and exit.
+    -i, --init
+        Create a config file in the current directory.
+
+Examples:
+    python pma
+        Open phpMyAdmin in the browser.
+
+    python pma my_db
+        Open phpMyAdmin in the browser and open the `my_db` database.
+
+    python pma my_db my_table
+        Open phpMyAdmin in the browser and open the `my_db` database and the `my_table` table.
+""")
+
+
+if __name__ == '__main__':
+    config_name = "pma.json"
+    __location__ = os.path.realpath(
+        os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    config = os.path.join(__location__, config_name)
+    # sys.argv[0] is the name of the script
+    # sys.argv[1:] is the list of arguments
+    main(sys.argv[1:])
