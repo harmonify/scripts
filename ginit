@@ -36,7 +36,9 @@ def switch(s: str, *args: Any) -> None:
         "--help": help,
         "-c": create_config,
         "--config": create_config,
+        "-io": execute_git,
         "--init-only": execute_git,
+        "-fo": copy_metadata,
         "--file-only": copy_metadata,
     }
 
@@ -144,9 +146,9 @@ Options:
         Print this help message and exit.
     -c, --config
         Create a config file in the script directory.
-    --init-only
+    -io, --init-only
         Only initialize git repository and ask user to commit or not.
-    --file-only
+    -fo, --file-only
         Only copy metadata files to destination directory.
 
 Description:
