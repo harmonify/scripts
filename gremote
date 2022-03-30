@@ -17,15 +17,16 @@ def main(args=None):
                 switch(args[-1], *args[:-1])
                 exit(0)
         remote = args[0] if len(args) >= 1 else "origin"
-        url = subprocess.check_output(["git", "remote", "get-url", remote]).decode("utf-8").strip()
+        url = subprocess.check_output(
+            ["git", "remote", "get-url", remote]).decode("utf-8").strip()
         # parse the url for hostname and path
         git_url = re.sub(r"^"
-            r"(?:https?://|git@)"
-            r"([^:/]*)"
-            r"(?::|/)"
-            r"(.*)"
-            r"\.git$"
-            r"$", r"https://\1/\2", url)
+                         r"(?:https?://|git@)"
+                         r"([^:/]*)"
+                         r"(?::|/)"
+                         r"(.*)"
+                         r"(\.git)?"
+                         r"$", r"https://\1/\2", url)
         print(f"Opening 'origin' git remote: {git_url}")
         webbrowser.open(git_url, new=0, autoraise=True)
         exit(0)
