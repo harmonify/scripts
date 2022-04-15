@@ -1,5 +1,7 @@
 # Introduction
 
+<img src="https://raw.githubusercontent.com/harmonify/scripts/main/.github/img/preview.png" width="600">
+
 `scripts` is a collection of scripts that I use to automate my development workflow.
 
 ## Installation
