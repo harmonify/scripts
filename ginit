@@ -14,9 +14,10 @@ def main(args: list[str]) -> None:
         if len(args) >= 1:
             if args[0].startswith('-'):
                 switch(args[0], *args[1:])
+                exit(0)
             elif args[-1].startswith('-'):
                 switch(args[-1], *args[:-1])
-            exit(0)
+                exit(0)
         arg = args[0] if len(args) >= 1 else "."
         copy_metadata(dest_dir=arg)
         execute_git(path=arg)
