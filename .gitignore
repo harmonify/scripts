@@ -6,7 +6,6 @@ pma.json
 ginit-files/
 
 # scripts logs
-pylink.log
 
 # others
 __pycache__/
