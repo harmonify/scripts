@@ -2,178 +2,165 @@
 
 from __future__ import annotations
 from typing import Any
-import json
+import argparse
 import sys
 import os
 import shutil
 import subprocess
+import textwrap
+import time
+from lib.config import Config
+from lib.utilities import get_root_dir, safe_makedirs
 
 
-def main(args: list[str]) -> None:
+def main() -> None:
+    """ The main entry point for ginit. """
+    start_time = time.time()
+
     try:
-        if len(args) >= 1:
-            if args[0].startswith('-'):
-                switch(args[0], *args[1:])
-                exit(0)
-            elif args[-1].startswith('-'):
-                switch(args[-1], *args[:-1])
-                exit(0)
-        arg = args[0] if len(args) >= 1 else "."
-        copy_metadata(dest_dir=arg)
-        execute_git(path=arg)
-        exit(0)
-    except KeyboardInterrupt:
-        print("\nExiting...")
-        exit(0)
-    except Exception as e:
-        print(e)
-        exit(1)
+        is_help_triggered = any(arg in sys.argv for arg in ["-h", "--help"])
+        args = parse_system_args()
+        destination_dir = args.get("path", ".")
+        config = GinitConfig()
+        source_dir = config.data.get("source_dir")
+
+        if args.get("config"):
+            config.initialize_config()
+        else:
+            if not args.get("init_only"):
+                copy_metadata(source_dir, destination_dir)
+            if not args.get("file_only"):
+                execute_git(destination_dir)
+        if not is_help_triggered:
+            print(f"Finished in {round(time.time() - start_time, 2)} seconds.")
+        sys.exit(0)
+    except (Exception, KeyboardInterrupt) as error:
+        if hasattr(error, 'code') and isinstance(error.code, int):
+            exit_code = error.code
+        else:
+            exit_code = 1
+            print(error)
+        if not is_help_triggered:
+            print(
+                f"Exited after {round(time.time() - start_time, 2)} seconds.")
+        sys.exit(exit_code)
 
 
-def switch(s: str, *args: Any) -> None:
-    """ Map the switch to the corresponding function and execute it. """
-    switches = {
-        "-h": help,
-        "--help": help,
-        "-c": create_config,
-        "--config": create_config,
-        "-io": execute_git,
-        "--init-only": execute_git,
-        "-fo": copy_metadata,
-        "--file-only": copy_metadata,
-    }
+class GinitConfig(Config):
+    """ The config file for ginit. """
 
-    if s in switches:
-        switches[s](*args)
-    else:
-        raise Exception(f"Unknown switch: {s}. Use -h or --help for help.")
+    def __init__(self) -> None:
+        super().__init__(file_name="ginit", version="2.0.0")
+        self.input_functions = [self._input_source_dir]
+        self.read_config()
+
+    def _input_source_dir(self) -> str:
+        while True:
+            print("Enter the metadata source directory path")
+            print("(default: '<script-location>/ginit-files/')")
+            src = input(": ") or os.path.join(get_root_dir(), "ginit-files")
+            # check if user specify a relative path or absolute path
+            if os.path.isabs(src):
+                source_dir = os.path.realpath(src)
+            else:
+                source_dir = os.path.realpath(
+                    os.path.join(os.getcwd(), *src.split("/")))
+            print(source_dir)
+            if not os.path.isdir(source_dir):
+                print(f"{source_dir} is not a directory.")
+            elif (input("Is this the right path (y/n)? ") or "y") == "y":
+                break
+        return {"source_dir": source_dir}
 
 
-def copy_metadata(dest_dir: str = ".") -> None:
-    """
-    Copy all files in source directory to destination directory.
-    """
-    data = read_config()
-    src_dir = data["src_dir"]
-    if not os.path.exists(src_dir):
-        raise Exception(f"{src_dir} not found.")
-    print(f"Copying metadata files from {src_dir} to {os.path.realpath(dest_dir)}...")
-    for src_entry in os.scandir(src_dir):
-        dest_path = os.path.join(dest_dir, src_entry.name)
-        if os.path.exists(dest_path):
-            print(f"{dest_path} is already exists. Skipping...")
+def parse_system_args() -> dict[str, Any]:
+    """ Parse command line arguments. """
+    parser = argparse.ArgumentParser(
+        description="Initialize a new project with Git and metadata files.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent("""
+            examples:
+              $ python ginit
+                  Copy all files in source directory to current directory
+                  and initialize the Git repository.
+              $ python ginit /path/to/destination
+                  Copy all files in source directory to `/path/to/destination`
+                  and initialize the Git repository.
+              $ python ginit --init-only
+                  Only initialize the Git repository.
+              $ python ginit -h
+                  Print this help message and sys.exit.
+
+            A Python utility to initialize a Git repository and copy all files
+            from the source directory specified in the config file (ginit.json)
+            to the destination directory.
+        """)
+    )
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=".",
+        help="the destination directory path. (default: .)"
+    )
+    partial_execution_group = parser.add_mutually_exclusive_group()
+    partial_execution_group.add_argument(
+        "-c", "--config",
+        help="create the config file",
+        action="store_true"
+    )
+    partial_execution_group.add_argument(
+        "-io", "--init-only",
+        action="store_true",
+        help="only initialize the Git repository.",
+        dest="init_only"
+    )
+    partial_execution_group.add_argument(
+        "-fo", "--file-only",
+        action="store_true",
+        help="only copy metadata files to destination directory.",
+        dest="file_only"
+    )
+    return vars(parser.parse_args())
+
+
+def copy_metadata(source_dir: str, destination_dir: str) -> None:
+    """ Copy all files in source directory to destination directory. """
+    if not os.path.exists(source_dir):
+        raise Exception(f"{source_dir} not found.")
+
+    real_destination_dir = safe_makedirs(destination_dir)
+    print(f"Copying metadata files to {real_destination_dir}.")
+    for entry in os.scandir(source_dir):
+        destination_path = os.path.realpath(
+            os.path.join(real_destination_dir, entry.name))
+        if os.path.exists(destination_path):
+            print(f"-  {destination_path} is already exists. Skipped.")
             continue
-        if src_entry.is_file():
-            shutil.copy(src_entry.path, dest_path)
-        elif src_entry.is_dir():
-            shutil.copytree(src_entry.path, dest_path)
+        if entry.is_file():
+            shutil.copy(entry.path, destination_path)
+        elif entry.is_dir():
+            shutil.copytree(entry.path, destination_path)
         else:
-            raise Exception(f"{src_entry.path} is not a file or directory.")
+            raise Exception(
+                f"What happened? {entry.path} is not a file or directory.")
 
 
-def execute_git(path=".") -> None:
+def execute_git(destination_dir: str) -> None:
     """
-    Initialize git repository in the given path and ask user to commit or not.
+    Initialize Git repository in the given destination_dir and ask user
+    to commit now or not.
     """
-    subprocess.call(["git", "init"], cwd=path)
-    print("Adding all files to staging area...")
-    subprocess.call(["git", "add", "."], cwd=path)
+    return_code = 0
+    real_destination_dir = safe_makedirs(destination_dir)
+    subprocess.call(["git", "init"], cwd=real_destination_dir)
+    subprocess.call(["git", "add", "."], cwd=real_destination_dir)
+    print("Added all files to the staging area.")
     if input("Commit? (y/n): ") == "y":
-        subprocess.call(["git", "commit", "-m", "Initial commit"], cwd=path)
-    else:
-        print("Aborted.")
-    subprocess.call(["git", "status"], cwd=path)
-
-
-def read_config() -> dict[str, str]:
-    """ Read the config file and return the data. """
-    config = os.path.join(__location__, config_name)
-
-    if not os.path.exists(config):
-        print(f"{config} not found.")
-        print(f"Initializing {config_name}...")
-        data = create_config()
-    else:
-        print(f"Reading {config_name}...")
-        with open(config, "r") as f:
-            data = json.loads(f.read())
-    return data
-
-
-def create_config() -> dict[str, str]:
-    """ Create a config file and return the data. """
-    while True:
-        print()
-        print("Enter the metadata source directory path (e.g. /home/user/ginit-files)")
-        print("Default: '<script-location>/ginit-files/'")
-        src = input(": ") or os.path.join(__location__, "ginit-files")
-        # check if user specify a relative path or absolute path
-        if os.path.isabs(src):
-            src_dir = os.path.realpath(src)
-        else:
-            src_dir = os.path.realpath(
-                os.path.join(os.getcwd(), *src.split("/")))
-        print(src_dir)
-        if not os.path.isdir(src_dir):
-            print(f"{src_dir} is not a directory.")
-        elif input("Is this a right path (y/n)? ") == "y":
-            break
-    data = {
-        "app": "ginit",
-        "version": "1.0",
-        "src_dir": src_dir,
-    }
-
-    config = os.path.join(__location__, config_name)
-    with open(config, "w") as f:
-        f.write(json.dumps(data))
-    print(f"{config_name} created.")
-    return data
-
-
-def help(*args: Any, **kwargs: Any) -> None:
-    print("""
-=====================================================================
-
-ginit - a python util to initialize git repository
-
-=====================================================================
-
-Usage:
-    python ginit [options] [source] [destination] ...
-
-Options:
-    -h, --help
-        Print this help message and exit.
-    -c, --config
-        Create a config file in the script directory.
-    -io, --init-only
-        Only initialize git repository and ask user to commit or not.
-    -fo, --file-only
-        Only copy metadata files to destination directory.
-
-Description:
-    ginit is a python utility to initialize git repository and copy
-    all files from source directory to destination directory.
-    The source directory is the directory where metadata files are
-    stored and included in every ginit call.
-
-Examples:
-    python ginit
-        Copy all files in source directory to current directory
-        and initialize git repository.
-
-    python ginit /path/to/destination
-        Copy all files in source directory to `/path/to/destination`
-        and initialize git repository.
-
-    python ginit -h
-        Print this help message and exit.
-""")
+        return_code = subprocess.call(
+            ["git", "commit", "-m", "Initial commit"], cwd=real_destination_dir)
+    if return_code == 0:
+        subprocess.call(["git", "status"], cwd=real_destination_dir)
 
 
 if __name__ == '__main__':
-    config_name = "ginit.json"
-    __location__ = os.path.realpath(
-        os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    main(sys.argv[1:])
+    main()
