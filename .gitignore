@@ -3,7 +3,11 @@ ginit.json
 pma.json
 
 # scripts files
-ginit-files/**/*
+ginit-files/
 
 # scripts logs
 pylink.log
+
+# others
+__pycache__/
+dump/
