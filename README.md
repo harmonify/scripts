@@ -12,7 +12,7 @@
     git clone https://github.com/harmonify/scripts
     ```
 
-* Install Python version 3.6 or higher [here](https://www.python.org/downloads/)
+* Install Python 3 (tested on Python 3.9+) [here](https://www.python.org/downloads/)
 * Add Python to your PATH
 * Add the cloned repository to your PATH, for convenience
 
@@ -21,7 +21,11 @@
 Some links to community answers on how to add a new PATH variable to your local machine:
 
 * [For Windows](https://stackoverflow.com/questions/44272416/how-to-add-a-folder-to-path-environment-variable-in-windows-10-with-screensho)
-* [For Linux](https://unix.stackexchange.com/questions/26047/how-to-correctly-add-a-path-to-path)
+* [For Unix](https://unix.stackexchange.com/questions/26047/how-to-correctly-add-a-path-to-path)
+
+### Unix further configuration
+
+You may want to install the `python-is-python3` package with the package manager of your choice to improve the compatibility of the Python scripts execution.
 
 ## Usage
 
