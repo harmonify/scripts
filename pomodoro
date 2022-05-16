@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+
+import os
+import time
+import subprocess
+import sys
+import winsound
+
+
+def main():
+    try:
+        pomodoro()
+    except KeyboardInterrupt:
+        print_then_exit("Bye!")
+    except Exception as e:
+        exit_code = e.code if hasattr(
+            e, 'code') and isinstance(e.code, int) else 1
+        print_then_exit(e, exit_code)
+
+
+def pomodoro():
+    """ Pomodoro timer with time format hh:mm:ss """
+    DEFAULT_SESSION_DURATION = 25 * 60
+    DEFAULT_BREAK_DURATION = 5 * 60
+    DEFAULT_LONG_BREAK_DURATION = 15 * 60
+    DEFAULT_SESSION_UNTIL_LONG_BREAK_COUNT = 4
+
+    # get CLI arguments for the pomodoro configuration
+    session_duration = int(sys.argv[1]) if len(
+        sys.argv) > 1 else DEFAULT_SESSION_DURATION
+    break_duration = int(sys.argv[2]) if len(
+        sys.argv) > 2 else DEFAULT_BREAK_DURATION
+    long_break_duration = int(sys.argv[3]) if len(
+        sys.argv) > 3 else DEFAULT_LONG_BREAK_DURATION
+    session_count_until_long_break = int(sys.argv[4]) if len(
+        sys.argv) > 4 else DEFAULT_SESSION_UNTIL_LONG_BREAK_COUNT
+
+    time_info = {
+        "session_duration": session_duration,
+        "break_duration": break_duration,
+        "long_break_duration": long_break_duration,
+        "session_until_long_break_count": session_count_until_long_break,
+    }
+    start_pomodoro(time_info)
+
+
+def start_pomodoro(time_info):
+    while True:
+        for _ in range(time_info.get("session_until_long_break_count") - 1):
+            start_session(time_info.get("session_duration"))
+            start_break(time_info.get("break_duration"))
+        start_session(time_info.get("session_duration"))
+        start_long_break(time_info.get("long_break_duration"))
+        play_notification_sound()
+        if input("Do you want to start a new Pomodoro? (Enter key to continue, 'q' to quit) ") == "q":
+            print_then_exit("Bye!")
+
+
+def start_session(session_duration):
+    play_notification_sound()
+    if input("Start the session now? (Enter key to continue, 'q' to quit) ") == "q":
+        print_then_exit("Bye!")
+    print("Starting a session!")
+    countdown_to_zero_and_print_time(session_duration)
+
+
+def start_break(break_duration):
+    play_notification_sound()
+    if input("Start a break now? (Enter key to continue, 'q' to quit) ") == "q":
+        print_then_exit("Bye!")
+    print("Starting a break!")
+    countdown_to_zero_and_print_time(break_duration)
+
+
+def start_long_break(long_break_duration):
+    play_notification_sound()
+    if input("Start a long break now? (Enter key to continue, 'q' to quit) ") == "q":
+        print_then_exit("Bye!")
+    print("Starting a long break!")
+    countdown_to_zero_and_print_time(long_break_duration)
+
+
+def countdown_to_zero_and_print_time(seconds):
+    while seconds > 0:
+        seconds = seconds - 1
+        time.sleep(1)
+        print_time(seconds)
+    print("Time's up!")
+
+
+def play_notification_sound():
+    if os.name == "nt":
+        winsound.PlaySound('SystemExclamation', winsound.SND_ASYNC)
+    else:
+        # flag 'e' to interpret backslash and 'n' for no trailing newline char
+        subprocess.run(['echo', '-en', '"\a"'])
+
+
+def print_time(seconds):
+    hour = seconds // 3600
+    minute = (seconds % 3600) // 60
+    second = seconds % 60
+    print("{:02}:{:02}:{:02}".format(hour, minute, second))
+
+
+def print_then_exit(message, exit_code=0):
+    print(message)
+    sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()
