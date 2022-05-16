@@ -27,7 +27,7 @@ def main(args=None):
                          r"(.*)"
                          r"(\.git)?"
                          r"$", r"https://\1/\2", url)
-        print(f"Opening 'origin' git remote: {git_url}")
+        print(f"Opening {remote} git remote: {git_url}")
         webbrowser.open(git_url, new=0, autoraise=True)
         exit(0)
     except KeyboardInterrupt:
